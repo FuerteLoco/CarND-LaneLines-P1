@@ -1,56 +1,45 @@
 # **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
+[image1]: ./test_images_output/solidWhiteCurve_1.jpg "Grayscaling"
+[image2]: ./test_images_output/solidWhiteCurve_2.jpg "Gaussian smoothing"
+[image3]: ./test_images_output/solidWhiteCurve_3.jpg "Canny Edge Detection"
+[image4]: ./test_images_output/solidWhiteCurve_4.jpg "Region of interest (ROI) selection"
+[image5]: ./test_images_output/solidWhiteCurve_5.jpg "Hough Transform line detection"
+[image6]: ./test_images_output/solidWhiteCurve_6.jpg "Bitmap merging"
+[image7]: ./test_images_output/challenge.jpg "Frame from challenge.mp4"
 
-Overview
----
+### The pipeline
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
+The processing pipeline consists of these steps:
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
+1. Grayscaling:
+   ![alt text][image1]
+2. Gaussian smoothing:
+   ![alt text][image2]
+3. Canny Edge Detection:
+   ![alt text][image3]
+4. Region of interest (ROI) selection:
+   ![alt text][image4]
+5. Hough Transform line detection:
+   ![alt text][image5]
+6. Bitmap merging:
+   ![alt text][image6]
 
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
+In order to draw a single line on the left and right lanes, I modified the draw_lines() function:
+* Each Hough line is checked, if its slope value is in a certain range to be a left lane line or a right lane line. Nearly horizontal or vertical lines are discarded.
+* To avoid spurious false-positives, left lane lines, which actually appear on the right-hand half of the bitmap, and vice-versa are also discarded.
+* Slope and intercept values of left and right lane lines are summed up weighted by their line length. This gives long lines a higher weight than smaller lines, because slope and intercept values for longer lines are less error-prone.
+* At the end an average value for slope and intercept for both left and right lane lines is calculated and both lines are drawn in a bitmap.
 
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
+### Shortcomings and improvements
 
+1. The pipeline looks on different grayscale levels only. This is not sufficient, as can be seen in the challenge video: the left yellow line on the bridge has almost same grayscale level than the bridge itself. Therefore the line cannot be detected at all in some frames. A possible improvement would be to use color selection instead of simple grayscaling. The algorithm should look on white and yellow color only, and this should be done independantly from brightness.
+2. ROI cropping now has a fixed region. I believe this is not sufficient. Lane lines could occur everywhere in the picture, at least in bottom part. Assuming a fixed region will lead to missed lines when the car moves between different lanes. Maybe one could improve this with a sliding ROI depending on the last detected lane lines. Or one could omit this step completely, if it would be able to classify all the  detected lines correctly (for example by machine learning).
+3. The parameters for Hough lines detection are also fixed at the moment. It's not easy to find a satisfying parameter set, which works under all possible conditions. It could be necessary to tweak more or even calibrate these parameters on-the-fly.
+4. The algorithm which calculates the average lines is actually not aware of formerly calculated lines. With this information, it would be possible to apply a filter to slope and intercept values. This would result in a smoother positioning of the lane lines.
+5. It is also assumed, that there are only two lane lines to be detected: a left and a right one. If the car moves and there are more than two lines in ROI or if there are line splits or mergers, the current algorithm will fail. A possible improvement could be to collect all Hough lines which belong together into one bin. This could be done on looking on slope and intercept values. After that you will have several bins which can be averaged to several lines. And then with some magice fairy dust you could pick the correct left and right line...
 
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
+### Final note
 
-1. Describe the pipeline
-
-2. Identify any shortcomings
-
-3. Suggest possible improvements
-
-We encourage using images in your writeup to demonstrate how your pipeline works.  
-
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
-
-
-The Project
----
-
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
-
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/83ec35ee-1e02-48a5-bdb7-d244bd47c2dc/lessons/8c82408b-a217-4d09-b81d-1bda4c6380ef/concepts/4f1870e0-3849-43e4-b670-12e6f2d4b7a7) if you haven't already.
-
-**Step 2:** Open the code in a Jupyter Notebook
-
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out <A HREF="https://www.packtpub.com/books/content/basics-jupyter-notebook-and-python" target="_blank">Cyrille Rossant's Basics of Jupyter Notebook and Python</A> to get started.
-
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
-
-`> jupyter notebook`
-
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
-
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
-
+How difficult it is for the current algorithm to find the lane lines in the challenge video can be seen [here](test_videos_output/challenge_hough.mp4). This video has been generated with an enhanced version of the draw_lines() function which draws all the Hough lines in different colors. Yellow lines are used to calculate the left lane line and green lines are used for the right lane line. Blue lines are discarded because they have either not the correct slope value or they appear on the wrong side of the bitmap.
+![alt text][image7]
